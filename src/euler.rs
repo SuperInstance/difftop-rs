@@ -3,8 +3,7 @@
 //! Poincaré-Hopf theorem: The Euler characteristic χ(M) equals the sum of
 //! indices of any vector field with isolated zeros on M.
 
-use nalgebra::{DVector, DMatrix};
-use crate::vector_field::{VectorField, classify_equilibrium, EquilibriumType};
+use nalgebra::DMatrix;
 
 /// The index of an isolated zero of a vector field.
 /// Computed from the degree of the map V/|V|: S^{n-1}_ε → S^{n-1}
@@ -14,21 +13,29 @@ pub fn index_of_zero(jacobian: &DMatrix<f64>) -> i32 {
         return 0;
     }
     let det = jacobian.determinant();
-    if det > 0.0 { 1 } else if det < 0.0 { -1 } else { 0 }
+    if det > 0.0 {
+        1
+    } else if det < 0.0 {
+        -1
+    } else {
+        0
+    }
 }
 
 /// Compute the Euler characteristic via the Poincaré-Hopf theorem.
 /// χ(M) = Σ index_p(V) for all zeros p of V.
-pub fn euler_characteristic_poincare_hopf(
-    jacobians_at_zeros: &[DMatrix<f64>],
-) -> i32 {
-    jacobians_at_zeros.iter().map(|jac| index_of_zero(jac)).sum()
+pub fn euler_characteristic_poincare_hopf(jacobians_at_zeros: &[DMatrix<f64>]) -> i32 {
+    jacobians_at_zeros.iter().map(index_of_zero).sum()
 }
 
 /// Known Euler characteristics for standard manifolds.
 pub fn euler_characteristic_sphere(n: usize) -> i32 {
     // χ(Sⁿ) = 2 if n is even, 0 if n is odd
-    if n % 2 == 0 { 2 } else { 0 }
+    if n.is_multiple_of(2) {
+        2
+    } else {
+        0
+    }
 }
 
 pub fn euler_characteristic_torus() -> i32 {
@@ -61,16 +68,22 @@ pub fn euler_characteristic_from_triangulation(
 /// Generalized Euler characteristic for CW-complex: χ = Σ (-1)^k * n_k
 /// where n_k is the number of k-cells.
 pub fn euler_characteristic_cw(cell_counts: &[usize]) -> i32 {
-    cell_counts.iter().enumerate().map(|(k, &count)| {
-        if k % 2 == 0 { count as i32 } else { -(count as i32) }
-    }).sum()
+    cell_counts
+        .iter()
+        .enumerate()
+        .map(|(k, &count)| {
+            if k % 2 == 0 {
+                count as i32
+            } else {
+                -(count as i32)
+            }
+        })
+        .sum()
 }
 
 /// The Euler class of the tangent bundle (top Chern class for complex manifolds).
 /// For an oriented n-manifold, e(TM) ∈ Hⁿ(M; Z) and ∫ e(TM) = χ(M).
-pub fn euler_class_integral(
-    euler_characteristic: i32,
-) -> i32 {
+pub fn euler_class_integral(euler_characteristic: i32) -> i32 {
     euler_characteristic
 }
 
@@ -83,17 +96,10 @@ pub fn verify_poincare_hopf_sphere() -> bool {
     // ∂V₂/∂x = 0, ∂V₂/∂y = -z, ∂V₂/∂z = -y
     // ∂V₃/∂x = 2x, ∂V₃/∂y = 2y, ∂V₃/∂z = 0
     // At (0,0,1):
-    let jac_north = DMatrix::from_row_slice(3, 3, &[
-        -1.0, 0.0, 0.0,
-        0.0, -1.0, 0.0,
-        0.0, 0.0, 0.0,
-    ]);
+    let _jac_north =
+        DMatrix::from_row_slice(3, 3, &[-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0]);
     // At south pole (0,0,-1):
-    let jac_south = DMatrix::from_row_slice(3, 3, &[
-        1.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0,
-    ]);
+    let _jac_south = DMatrix::from_row_slice(3, 3, &[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
 
     // These Jacobians have det=0, so we need a different vector field.
     // Use V = (-y, x, 0) on S² - has zeros at poles.
@@ -131,9 +137,17 @@ pub fn verify_gauss_bonnet(
 /// Compute χ for a manifold using Morse theory.
 /// χ(M) = Σ (-1)^k m_k where m_k is the number of critical points of index k.
 pub fn euler_characteristic_morse(critical_point_counts: &[usize]) -> i32 {
-    critical_point_counts.iter().enumerate().map(|(k, &count)| {
-        if k % 2 == 0 { count as i32 } else { -(count as i32) }
-    }).sum()
+    critical_point_counts
+        .iter()
+        .enumerate()
+        .map(|(k, &count)| {
+            if k % 2 == 0 {
+                count as i32
+            } else {
+                -(count as i32)
+            }
+        })
+        .sum()
 }
 
 #[cfg(test)]
@@ -155,10 +169,10 @@ mod tests {
     #[test]
     fn test_euler_characteristic_sphere() {
         assert_eq!(euler_characteristic_sphere(0), 2); // S⁰ = {±1}
-        assert_eq!(euler_characteristic_sphere(1), 0);  // S¹
-        assert_eq!(euler_characteristic_sphere(2), 2);  // S²
-        assert_eq!(euler_characteristic_sphere(3), 0);  // S³
-        assert_eq!(euler_characteristic_sphere(4), 2);  // S⁴
+        assert_eq!(euler_characteristic_sphere(1), 0); // S¹
+        assert_eq!(euler_characteristic_sphere(2), 2); // S²
+        assert_eq!(euler_characteristic_sphere(3), 0); // S³
+        assert_eq!(euler_characteristic_sphere(4), 2); // S⁴
     }
 
     #[test]

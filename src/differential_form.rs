@@ -1,7 +1,7 @@
 //! Differential forms: exterior algebra, wedge product, pullback, exterior derivative.
 
 use nalgebra::DVector;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// A differential k-form on R^n at a point.
 /// A k-form is an alternating multilinear map (R^n)^k -> R.
@@ -35,8 +35,19 @@ impl DifferentialForm {
     /// Create a k-form from components.
     pub fn from_components(degree: usize, ambient_dimension: usize, components: Vec<f64>) -> Self {
         let expected = binomial(ambient_dimension, degree);
-        assert_eq!(components.len(), expected, "Wrong number of components: expected {}, got {}", expected, components.len());
-        Self { degree, ambient_dimension, components, base_point: None }
+        assert_eq!(
+            components.len(),
+            expected,
+            "Wrong number of components: expected {}, got {}",
+            expected,
+            components.len()
+        );
+        Self {
+            degree,
+            ambient_dimension,
+            components,
+            base_point: None,
+        }
     }
 
     /// Create a k-form at a specific point.
@@ -62,14 +73,11 @@ impl DifferentialForm {
             let mut det_sum = 0.0;
             let perms = permutations(self.degree);
             for perm in &perms {
-                let mut sign = 1.0;
+                let s = if is_even_permutation(perm) { 1.0 } else { -1.0 };
                 let mut prod = 1.0;
                 for (i, &p) in perm.iter().enumerate() {
                     prod *= vectors[p][combo[i]];
-                    sign *= if is_even_permutation(perm) { 1.0 } else { -1.0 };
                 }
-                // Only need sign once per permutation
-                let s = if is_even_permutation(perm) { 1.0 } else { -1.0 };
                 det_sum += s * prod;
             }
             result += self.components[comp_idx] * det_sum;
@@ -91,17 +99,29 @@ impl DifferentialForm {
     pub fn add(&self, other: &DifferentialForm) -> DifferentialForm {
         assert_eq!(self.degree, other.degree);
         assert_eq!(self.ambient_dimension, other.ambient_dimension);
-        let components: Vec<f64> = self.components.iter()
+        let components: Vec<f64> = self
+            .components
+            .iter()
             .zip(other.components.iter())
             .map(|(a, b)| a + b)
             .collect();
-        DifferentialForm { degree: self.degree, ambient_dimension: self.ambient_dimension, components, base_point: self.base_point.clone() }
+        DifferentialForm {
+            degree: self.degree,
+            ambient_dimension: self.ambient_dimension,
+            components,
+            base_point: self.base_point.clone(),
+        }
     }
 
     /// Scale a form.
     pub fn scale(&self, scalar: f64) -> DifferentialForm {
         let components: Vec<f64> = self.components.iter().map(|c| c * scalar).collect();
-        DifferentialForm { degree: self.degree, ambient_dimension: self.ambient_dimension, components, base_point: self.base_point.clone() }
+        DifferentialForm {
+            degree: self.degree,
+            ambient_dimension: self.ambient_dimension,
+            components,
+            base_point: self.base_point.clone(),
+        }
     }
 }
 
@@ -131,11 +151,15 @@ pub fn wedge(alpha: &DifferentialForm, beta: &DifferentialForm) -> DifferentialF
                 m.sort();
                 m
             };
-            if merged.len() != result_degree { continue; }
+            if merged.len() != result_degree {
+                continue;
+            }
             // Check for duplicates (wedge of forms with shared indices is zero)
             let mut deduped = merged.clone();
             deduped.dedup();
-            if deduped.len() != result_degree { continue; }
+            if deduped.len() != result_degree {
+                continue;
+            }
 
             // Find the sign of the shuffle permutation
             let sign = shuffle_sign(k_combo, l_combo, &merged);
@@ -152,10 +176,7 @@ pub fn wedge(alpha: &DifferentialForm, beta: &DifferentialForm) -> DifferentialF
 /// Exterior derivative d: k-forms -> (k+1)-forms.
 /// Computed numerically from the form's dependence on position.
 /// For symbolic computation, we use known formulas for standard forms.
-pub fn exterior_derivative(
-    form: &DifferentialForm,
-    _h: f64,
-) -> DifferentialForm {
+pub fn exterior_derivative(form: &DifferentialForm, _h: f64) -> DifferentialForm {
     // For numerical computation, we'd need the form as a function of position.
     // Here we provide the algebraic structure; specific cases handled in tests.
     let new_degree = form.degree + 1;
@@ -191,10 +212,7 @@ pub fn d_1form(jacobian: &nalgebra::DMatrix<f64>) -> DifferentialForm {
 /// Pullback of a k-form by a smooth map.
 /// Given a map F: R^m -> R^n with Jacobian J, and a k-form ω on R^n,
 /// the pullback F*ω is a k-form on R^m.
-pub fn pullback(
-    form: &DifferentialForm,
-    jacobian: &nalgebra::DMatrix<f64>,
-) -> DifferentialForm {
+pub fn pullback(form: &DifferentialForm, jacobian: &nalgebra::DMatrix<f64>) -> DifferentialForm {
     let m = jacobian.ncols(); // source dimension
     let k = form.degree;
     let n = form.ambient_dimension;
@@ -249,8 +267,12 @@ pub fn symplectic_form(n: usize) -> DifferentialForm {
 // --- Helper functions ---
 
 fn binomial(n: usize, k: usize) -> usize {
-    if k > n { return 0; }
-    if k == 0 || k == n { return 1; }
+    if k > n {
+        return 0;
+    }
+    if k == 0 || k == n {
+        return 1;
+    }
     let k = k.min(n - k);
     let mut result = 1usize;
     for i in 0..k {
@@ -260,8 +282,12 @@ fn binomial(n: usize, k: usize) -> usize {
 }
 
 fn k_combinations(n: usize, k: usize) -> Vec<Vec<usize>> {
-    if k == 0 { return vec![vec![]]; }
-    if k > n { return vec![]; }
+    if k == 0 {
+        return vec![vec![]];
+    }
+    if k > n {
+        return vec![];
+    }
     let mut result = Vec::new();
     let mut combo: Vec<usize> = (0..k).collect();
     loop {
@@ -271,34 +297,40 @@ fn k_combinations(n: usize, k: usize) -> Vec<Vec<usize>> {
         while i > 0 && combo[i] == n - k + i {
             i -= 1;
         }
-        if combo[i] == n - k + i + 1 { break; }
+        if combo[i] == n - k + i + 1 {
+            break;
+        }
         // Actually: simpler approach
         let mut done = true;
         for j in (0..k).rev() {
             if combo[j] < n - k + j {
                 combo[j] += 1;
-                for l in j+1..k {
-                    combo[l] = combo[l-1] + 1;
+                for l in j + 1..k {
+                    combo[l] = combo[l - 1] + 1;
                 }
                 done = false;
                 break;
             }
         }
-        if done { break; }
+        if done {
+            break;
+        }
     }
     result
 }
 
 fn permutations(n: usize) -> Vec<Vec<usize>> {
-    if n == 0 { return vec![vec![]]; }
+    if n == 0 {
+        return vec![vec![]];
+    }
     let mut result = Vec::new();
     let mut perm: Vec<usize> = (0..n).collect();
     result.push(perm.clone());
     loop {
         // Next permutation (lexicographic)
         let mut k = None;
-        for i in (0..n-1).rev() {
-            if perm[i] < perm[i+1] {
+        for i in (0..n - 1).rev() {
+            if perm[i] < perm[i + 1] {
                 k = Some(i);
                 break;
             }
@@ -308,14 +340,14 @@ fn permutations(n: usize) -> Vec<Vec<usize>> {
             None => break,
         };
         let mut l = 0;
-        for j in (ki+1..n).rev() {
+        for j in (ki + 1..n).rev() {
             if perm[ki] < perm[j] {
                 l = j;
                 break;
             }
         }
         perm.swap(ki, l);
-        perm[ki+1..].reverse();
+        perm[ki + 1..].reverse();
         result.push(perm.clone());
     }
     result
@@ -335,7 +367,7 @@ fn is_even_permutation(perm: &[usize]) -> bool {
             }
         }
     }
-    (n - num_cycles) % 2 == 0
+    (n - num_cycles).is_multiple_of(2)
 }
 
 fn shuffle_sign(k_combo: &[usize], l_combo: &[usize], merged: &[usize]) -> f64 {
@@ -347,7 +379,7 @@ fn shuffle_sign(k_combo: &[usize], l_combo: &[usize], merged: &[usize]) -> f64 {
     // Sort merged_copy to match target, counting swaps
     for i in 0..merged_copy.len() {
         if merged_copy[i] != target[i] {
-            for j in (i+1)..merged_copy.len() {
+            for j in (i + 1)..merged_copy.len() {
                 if merged_copy[j] == target[i] {
                     merged_copy.swap(i, j);
                     sign *= -1;
@@ -371,7 +403,9 @@ pub fn hodge_star(form: &DifferentialForm) -> DifferentialForm {
     let mut result = vec![0.0; nk_indices.len()];
 
     for (ki, k_combo) in k_indices.iter().enumerate() {
-        if form.components[ki].abs() < 1e-30 { continue; }
+        if form.components[ki].abs() < 1e-30 {
+            continue;
+        }
         // Complement of k_combo
         let complement: Vec<usize> = (0..n).filter(|x| !k_combo.contains(x)).collect();
         if let Some(nki) = nk_indices.iter().position(|x| *x == complement) {
@@ -379,8 +413,16 @@ pub fn hodge_star(form: &DifferentialForm) -> DifferentialForm {
             // (k_combo, complement) -> (0, 1, ..., n-1)
             let full: Vec<usize> = k_combo.iter().chain(complement.iter()).cloned().collect();
             let identity: Vec<usize> = (0..n).collect();
-            let sign = if is_even_permutation_from(&full, &identity) { 1.0 } else { -1.0 };
-            let k_nk_sign = if (k * (n - k)) % 2 == 0 { 1.0 } else { -1.0 };
+            let sign = if is_even_permutation_from(&full, &identity) {
+                1.0
+            } else {
+                -1.0
+            };
+            let k_nk_sign = if (k * (n - k)).is_multiple_of(2) {
+                1.0
+            } else {
+                -1.0
+            };
             result[nki] += k_nk_sign * sign * form.components[ki];
         }
     }

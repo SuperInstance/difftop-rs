@@ -1,21 +1,30 @@
 //! Vector fields and flows: integral curves, equilibrium points.
 
+use crate::tangent::TangentVector;
 use nalgebra::DVector;
-use crate::tangent::{TangentVector, TangentSpace};
 
 /// A smooth vector field on a manifold of dimension n.
 /// Represented as a function from R^n to R^n.
 pub struct VectorField {
     pub dimension: usize,
     /// The vector field as a function V: R^n -> R^n.
+    #[allow(clippy::type_complexity)]
     pub f: Box<dyn Fn(&DVector<f64>) -> DVector<f64>>,
     /// Name of the vector field.
     pub name: String,
 }
 
 impl VectorField {
-    pub fn new(name: &str, dimension: usize, f: impl Fn(&DVector<f64>) -> DVector<f64> + 'static) -> Self {
-        Self { dimension, f: Box::new(f), name: name.to_string() }
+    pub fn new(
+        name: &str,
+        dimension: usize,
+        f: impl Fn(&DVector<f64>) -> DVector<f64> + 'static,
+    ) -> Self {
+        Self {
+            dimension,
+            f: Box::new(f),
+            name: name.to_string(),
+        }
     }
 
     /// Evaluate the vector field at a point.
@@ -25,7 +34,11 @@ impl VectorField {
 
     /// Find equilibrium points (zeros of the vector field) by checking a grid.
     /// Returns approximate equilibrium points.
-    pub fn find_equilibria_grid(&self, bounds: &[(f64, f64)], resolution: usize) -> Vec<DVector<f64>> {
+    pub fn find_equilibria_grid(
+        &self,
+        bounds: &[(f64, f64)],
+        resolution: usize,
+    ) -> Vec<DVector<f64>> {
         assert_eq!(bounds.len(), self.dimension);
         let threshold = 0.1; // Use a larger threshold for grid search
 
@@ -90,7 +103,7 @@ pub fn classify_equilibrium(jacobian: &nalgebra::DMatrix<f64>) -> EquilibriumTyp
     let eigenvalues = eigen.eigenvalues;
 
     let mut real_parts: Vec<f64> = Vec::new();
-    let mut has_imaginary = false;
+    let _has_imaginary = false;
 
     // For a general matrix, we'd need complex eigenvalues.
     // For symmetric matrices, eigenvalues are real.
@@ -180,7 +193,9 @@ pub fn curl_2d(vf: &VectorField, p: &DVector<f64>, h: f64) -> f64 {
 
 /// Predefined: constant vector field on R^n.
 pub fn constant_vector_field(n: usize, value: DVector<f64>) -> VectorField {
-    VectorField::new(&format!("constant_{}d", n), n, move |_: &DVector<f64>| value.clone())
+    VectorField::new(&format!("constant_{}d", n), n, move |_: &DVector<f64>| {
+        value.clone()
+    })
 }
 
 /// Predefined: radial vector field V(x) = x.
@@ -212,12 +227,20 @@ mod tests {
     fn test_radial_equilibrium() {
         let vf = radial_vector_field(2);
         let eqs = vf.find_equilibria_grid(&[(-1.0, 1.0), (-1.0, 1.0)], 20);
-        assert!(!eqs.is_empty(), "Origin should be an equilibrium of radial field");
+        assert!(
+            !eqs.is_empty(),
+            "Origin should be an equilibrium of radial field"
+        );
         // The origin should be near (0,0)
-        let closest = eqs.iter().min_by(|a, b| {
-            a.norm().partial_cmp(&b.norm()).unwrap()
-        }).unwrap();
-        assert!(closest.norm() < 0.2, "Equilibrium near origin: {:?}", closest);
+        let closest = eqs
+            .iter()
+            .min_by(|a, b| a.norm().partial_cmp(&b.norm()).unwrap())
+            .unwrap();
+        assert!(
+            closest.norm() < 0.2,
+            "Equilibrium near origin: {:?}",
+            closest
+        );
     }
 
     #[test]

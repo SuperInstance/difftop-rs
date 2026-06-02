@@ -1,10 +1,7 @@
 //! Application: agent dynamics on manifolds — flow analysis, equilibrium classification.
 
-use nalgebra::{DVector, DMatrix};
-use crate::vector_field::{VectorField, integral_curve, classify_equilibrium, EquilibriumType};
-use crate::tangent::{TangentVector, TangentSpace};
-use crate::degree::winding_number;
-use crate::euler::{euler_characteristic_poincare_hopf, index_of_zero};
+use crate::vector_field::{classify_equilibrium, integral_curve, EquilibriumType, VectorField};
+use nalgebra::{DMatrix, DVector};
 
 /// An agent moving on a manifold, governed by a vector field.
 #[derive(Clone, Debug)]
@@ -17,7 +14,11 @@ pub struct Agent {
 impl Agent {
     pub fn new(id: usize, position: DVector<f64>) -> Self {
         let dim = position.len();
-        Self { id, position, velocity: DVector::zeros(dim) }
+        Self {
+            id,
+            position,
+            velocity: DVector::zeros(dim),
+        }
     }
 
     /// Update the agent's position using Euler integration.
@@ -60,7 +61,11 @@ pub struct AgentSystem {
 impl AgentSystem {
     pub fn new(vector_field: VectorField) -> Self {
         let dim = vector_field.dimension;
-        Self { agents: Vec::new(), vector_field, dimension: dim }
+        Self {
+            agents: Vec::new(),
+            vector_field,
+            dimension: dim,
+        }
     }
 
     pub fn add_agent(&mut self, position: DVector<f64>) -> usize {
@@ -90,15 +95,19 @@ impl AgentSystem {
         let mut clusters = Vec::new();
 
         for i in 0..n {
-            if visited[i] { continue; }
+            if visited[i] {
+                continue;
+            }
             let mut cluster = Vec::new();
             let mut stack = vec![i];
             while let Some(j) = stack.pop() {
-                if visited[j] { continue; }
+                if visited[j] {
+                    continue;
+                }
                 visited[j] = true;
                 cluster.push(j);
-                for k in 0..n {
-                    if !visited[k] && self.agents[j].distance_to(&self.agents[k]) < threshold {
+                for (k, visited_k) in visited.iter().enumerate().take(n) {
+                    if !visited_k && self.agents[j].distance_to(&self.agents[k]) < threshold {
                         stack.push(k);
                     }
                 }
@@ -158,7 +167,11 @@ pub fn analyze_flow(
         trajectories.push(trajectory);
     }
 
-    FlowAnalysis { equilibria, classifications, trajectories }
+    FlowAnalysis {
+        equilibria,
+        classifications,
+        trajectories,
+    }
 }
 
 /// Compute the numerical Jacobian of a vector field at a point.
@@ -198,10 +211,12 @@ pub fn classify_dynamics(analysis: &FlowAnalysis) -> DynamicsType {
         return DynamicsType::Divergent;
     }
 
-    let has_stable = analysis.classifications.iter().any(|c| *c == EquilibriumType::Stable);
-    let has_unstable = analysis.classifications.iter().any(|c| *c == EquilibriumType::Unstable);
-    let has_saddle = analysis.classifications.iter().any(|c| *c == EquilibriumType::Saddle);
-    let has_center = analysis.classifications.iter().any(|c| *c == EquilibriumType::Center);
+    let has_stable = analysis.classifications.contains(&EquilibriumType::Stable);
+    let has_unstable = analysis
+        .classifications
+        .contains(&EquilibriumType::Unstable);
+    let has_saddle = analysis.classifications.contains(&EquilibriumType::Saddle);
+    let has_center = analysis.classifications.contains(&EquilibriumType::Center);
 
     if has_center && !has_stable && !has_unstable && !has_saddle {
         return DynamicsType::Oscillatory;
@@ -243,10 +258,7 @@ pub fn poincare_return(
 }
 
 /// Compute the Lyapunov exponent estimate from a trajectory.
-pub fn lyapunov_exponent(
-    trajectory: &[DVector<f64>],
-    dt: f64,
-) -> f64 {
+pub fn lyapunov_exponent(trajectory: &[DVector<f64>], dt: f64) -> f64 {
     if trajectory.len() < 3 {
         return 0.0;
     }
@@ -260,7 +272,11 @@ pub fn lyapunov_exponent(
             count += 1;
         }
     }
-    if count == 0 { 0.0 } else { sum / (count as f64 * dt) }
+    if count == 0 {
+        0.0
+    } else {
+        sum / (count as f64 * dt)
+    }
 }
 
 #[cfg(test)]
@@ -269,7 +285,9 @@ mod tests {
 
     #[test]
     fn test_agent_step() {
-        let vf = VectorField::new("constant", 2, |_: &DVector<f64>| DVector::from_vec(vec![1.0, 0.0]));
+        let vf = VectorField::new("constant", 2, |_: &DVector<f64>| {
+            DVector::from_vec(vec![1.0, 0.0])
+        });
         let mut agent = Agent::new(0, DVector::from_vec(vec![0.0, 0.0]));
         agent.step(&vf, 0.1);
         assert!((agent.position[0] - 0.1).abs() < 1e-10);
@@ -277,7 +295,9 @@ mod tests {
 
     #[test]
     fn test_agent_system() {
-        let vf = VectorField::new("constant", 2, |_: &DVector<f64>| DVector::from_vec(vec![1.0, 0.0]));
+        let vf = VectorField::new("constant", 2, |_: &DVector<f64>| {
+            DVector::from_vec(vec![1.0, 0.0])
+        });
         let mut system = AgentSystem::new(vf);
         system.add_agent(DVector::from_vec(vec![0.0, 0.0]));
         system.add_agent(DVector::from_vec(vec![0.0, 1.0]));
@@ -315,7 +335,9 @@ mod tests {
 
     #[test]
     fn test_numerical_jacobian() {
-        let vf = VectorField::new("linear", 2, |p: &DVector<f64>| DVector::from_vec(vec![p[0], -p[1]]));
+        let vf = VectorField::new("linear", 2, |p: &DVector<f64>| {
+            DVector::from_vec(vec![p[0], -p[1]])
+        });
         let p = DVector::from_vec(vec![0.0, 0.0]);
         let jac = numerical_jacobian(&vf, &p, 1e-5);
         assert!((jac[(0, 0)] - 1.0).abs() < 1e-3);
@@ -324,7 +346,9 @@ mod tests {
 
     #[test]
     fn test_agent_rk4() {
-        let vf = VectorField::new("constant", 2, |_: &DVector<f64>| DVector::from_vec(vec![1.0, 0.0]));
+        let vf = VectorField::new("constant", 2, |_: &DVector<f64>| {
+            DVector::from_vec(vec![1.0, 0.0])
+        });
         let mut agent = Agent::new(0, DVector::from_vec(vec![0.0, 0.0]));
         agent.step_rk4(&vf, 0.1);
         assert!((agent.position[0] - 0.1).abs() < 1e-6);
@@ -332,10 +356,12 @@ mod tests {
 
     #[test]
     fn test_lyapunov_exponent() {
-        let trajectory: Vec<DVector<f64>> = (0..100).map(|i| {
-            let t = i as f64 * 0.01;
-            DVector::from_vec(vec![t.exp(), 0.0])
-        }).collect();
+        let trajectory: Vec<DVector<f64>> = (0..100)
+            .map(|i| {
+                let t = i as f64 * 0.01;
+                DVector::from_vec(vec![t.exp(), 0.0])
+            })
+            .collect();
         let le = lyapunov_exponent(&trajectory, 0.01);
         // Should be positive (exponential growth)
         assert!(le > 0.0, "Lyapunov exponent should be positive, got {}", le);

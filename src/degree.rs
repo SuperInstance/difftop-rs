@@ -1,6 +1,6 @@
 //! Degree of a map: Brouwer degree, winding number.
 
-use nalgebra::{DVector, DMatrix};
+use nalgebra::{DMatrix, DVector};
 
 /// Compute the Brouwer degree of a smooth map f: Sⁿ → Sⁿ.
 /// The degree is the sum of signs of the Jacobian determinants at preimages of a regular value.
@@ -50,7 +50,9 @@ pub fn winding_number(
         let dx = gamma[0] - point[0];
         let dy = gamma[1] - point[1];
         let r2 = dx * dx + dy * dy;
-        if r2 < 1e-12 { continue; }
+        if r2 < 1e-12 {
+            continue;
+        }
 
         // Integrand: (x dy - y dx) / r² (where x,y are relative to the point)
         let numerator = dx * gamma_d[1] - dy * gamma_d[0];
@@ -63,7 +65,11 @@ pub fn winding_number(
 /// Compute the degree of an antipodal map on S^n: f(x) = -x.
 /// The degree of the antipodal map is (-1)^(n+1).
 pub fn antipodal_degree(n: usize) -> i32 {
-    if (n + 1) % 2 == 0 { 1 } else { -1 }
+    if (n + 1).is_multiple_of(2) {
+        1
+    } else {
+        -1
+    }
 }
 
 /// Compute the degree of the identity map (always 1).
@@ -96,15 +102,18 @@ pub fn local_degree(jacobian: &DMatrix<f64>) -> i32 {
         return 0;
     }
     let det = jacobian.determinant();
-    if det > 1e-10 { 1 } else if det < -1e-10 { -1 } else { 0 }
+    if det > 1e-10 {
+        1
+    } else if det < -1e-10 {
+        -1
+    } else {
+        0
+    }
 }
 
 /// Verify that degree is homotopy invariant.
 /// Two maps homotopic through F(x,t) should have the same degree.
-pub fn verify_homotopy_invariance(
-    degree_t0: i32,
-    degree_t1: i32,
-) -> bool {
+pub fn verify_homotopy_invariance(degree_t0: i32, degree_t1: i32) -> bool {
     degree_t0 == degree_t1
 }
 
@@ -163,7 +172,11 @@ mod tests {
         let curve_d = |t: f64| DVector::from_vec(vec![-t.sin(), t.cos()]);
         let point = DVector::from_vec(vec![0.0, 0.0]);
         let wn = winding_number(&curve, &curve_d, &point, 1000);
-        assert!((wn - 1.0).abs() < 0.01, "Winding number of circle around origin should be 1, got {}", wn);
+        assert!(
+            (wn - 1.0).abs() < 0.01,
+            "Winding number of circle around origin should be 1, got {}",
+            wn
+        );
     }
 
     #[test]
@@ -172,21 +185,30 @@ mod tests {
         let curve_d = |t: f64| DVector::from_vec(vec![-t.sin(), t.cos()]);
         let point = DVector::from_vec(vec![5.0, 0.0]);
         let wn = winding_number(&curve, &curve_d, &point, 1000);
-        assert!(wn.abs() < 0.1, "Winding number outside circle should be 0, got {}", wn);
+        assert!(
+            wn.abs() < 0.1,
+            "Winding number outside circle should be 0, got {}",
+            wn
+        );
     }
 
     #[test]
     fn test_winding_number_double_loop() {
-        let curve = |t: f64| DVector::from_vec(vec![(2.0*t).cos(), (2.0*t).sin()]);
-        let curve_d = |t: f64| DVector::from_vec(vec![-2.0*(2.0*t).sin(), 2.0*(2.0*t).cos()]);
+        let curve = |t: f64| DVector::from_vec(vec![(2.0 * t).cos(), (2.0 * t).sin()]);
+        let curve_d =
+            |t: f64| DVector::from_vec(vec![-2.0 * (2.0 * t).sin(), 2.0 * (2.0 * t).cos()]);
         let point = DVector::from_vec(vec![0.0, 0.0]);
         let wn = winding_number(&curve, &curve_d, &point, 1000);
-        assert!((wn - 2.0).abs() < 0.1, "Double loop winding number should be 2, got {}", wn);
+        assert!(
+            (wn - 2.0).abs() < 0.1,
+            "Double loop winding number should be 2, got {}",
+            wn
+        );
     }
 
     #[test]
     fn test_antipodal_degree() {
-        assert_eq!(antipodal_degree(1), 1);  // S¹ → S¹: degree 1? Actually (-1)² = 1
+        assert_eq!(antipodal_degree(1), 1); // S¹ → S¹: degree 1? Actually (-1)² = 1
         assert_eq!(antipodal_degree(2), -1); // S² → S²: degree -1
     }
 
@@ -223,22 +245,21 @@ mod tests {
         // f(z) = z² on S¹ ⊂ C, as f(x,y) = (x²-y², 2xy) normalized
         // This has degree 2 on the circle
         let f = |p: &DVector<f64>| {
-            let x = p[0]; let y = p[1];
-            let nx = x*x - y*y;
-            let ny = 2.0*x*y;
-            let r = (nx*nx + ny*ny).sqrt();
-            DVector::from_vec(vec![nx/r, ny/r])
+            let x = p[0];
+            let y = p[1];
+            let nx = x * x - y * y;
+            let ny = 2.0 * x * y;
+            let r = (nx * nx + ny * ny).sqrt();
+            DVector::from_vec(vec![nx / r, ny / r])
         };
         let df = |p: &DVector<f64>| {
-            let x = p[0]; let y = p[1];
-            let nx = x*x - y*y;
-            let ny = 2.0*x*y;
-            let r = (nx*nx + ny*ny).sqrt().max(1e-10);
+            let x = p[0];
+            let y = p[1];
+            let nx = x * x - y * y;
+            let ny = 2.0 * x * y;
+            let r = (nx * nx + ny * ny).sqrt().max(1e-10);
             // Simplified Jacobian (approximate)
-            DMatrix::from_row_slice(2, 2, &[
-                2.0*x/r, -2.0*y/r,
-                2.0*y/r, 2.0*x/r,
-            ])
+            DMatrix::from_row_slice(2, 2, &[2.0 * x / r, -2.0 * y / r, 2.0 * y / r, 2.0 * x / r])
         };
         // For z² on S¹, the regular value (1,0) has preimages (1,0) and (-1,0)
         let rv = DVector::from_vec(vec![1.0, 0.0]);

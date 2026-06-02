@@ -2,8 +2,8 @@
 //!
 //! Stokes' theorem: ∫_∂M ω = ∫_M dω
 
+use crate::differential_form::DifferentialForm;
 use nalgebra::DVector;
-use crate::differential_form::{DifferentialForm, wedge, d_from_gradient, d_1form, volume_form};
 
 /// A parametrized k-dimensional submanifold (for integration purposes).
 /// Defined by a map from [0,1]^k to R^n.
@@ -18,13 +18,14 @@ pub struct ParametrizedManifold {
 
 /// Integrate a k-form over a parametrized k-dimensional manifold using numerical quadrature.
 /// Uses midpoint rule on a grid.
+#[allow(clippy::too_many_arguments)]
 pub fn integrate_form(
     form: &dyn Fn(&DVector<f64>) -> DifferentialForm,
     manifold: &ParametrizedManifold,
     resolution: usize,
 ) -> f64 {
     let k = manifold.source_dimension;
-    let n = manifold.target_dimension;
+    let _n = manifold.target_dimension;
 
     let mut total = 0.0;
     let num_cells = resolution.pow(k as u32);
@@ -75,7 +76,14 @@ pub fn integrate_1d(f: &dyn Fn(f64) -> f64, a: f64, b: f64, n: usize) -> f64 {
 }
 
 /// Compute the integral of a function over a rectangle [a1,b1] × [a2,b2] (2D).
-pub fn integrate_2d(f: &dyn Fn(f64, f64) -> f64, a1: f64, b1: f64, a2: f64, b2: f64, n: usize) -> f64 {
+pub fn integrate_2d(
+    f: &dyn Fn(f64, f64) -> f64,
+    a1: f64,
+    b1: f64,
+    a2: f64,
+    b2: f64,
+    n: usize,
+) -> f64 {
     let h1 = (b1 - a1) / n as f64;
     let h2 = (b2 - a2) / n as f64;
     let mut sum = 0.0;
@@ -92,8 +100,8 @@ pub fn integrate_2d(f: &dyn Fn(f64, f64) -> f64, a1: f64, b1: f64, a2: f64, b2: 
 /// Verify Stokes' theorem for a specific 1-form and its boundary integral.
 /// Stokes: ∫_∂M ω = ∫_M dω
 pub fn verify_stokes_1form(
-    omega: &dyn Fn(&DVector<f64>) -> DifferentialForm,
-    domega: &dyn Fn(&DVector<f64>) -> DifferentialForm,
+    _omega: &dyn Fn(&DVector<f64>) -> DifferentialForm,
+    _domega: &dyn Fn(&DVector<f64>) -> DifferentialForm,
     boundary_integral: f64,
     interior_integral: f64,
     tolerance: f64,
@@ -104,8 +112,10 @@ pub fn verify_stokes_1form(
 /// Compute the surface integral of a 2-form over a 2D parametrized surface.
 pub fn surface_integral_2form(
     form_2d: &dyn Fn(f64, f64) -> f64,
-    a1: f64, b1: f64,
-    a2: f64, b2: f64,
+    a1: f64,
+    b1: f64,
+    a2: f64,
+    b2: f64,
     n: usize,
 ) -> f64 {
     integrate_2d(form_2d, a1, b1, a2, b2, n)
@@ -114,38 +124,56 @@ pub fn surface_integral_2form(
 /// Compute the line integral of a 1-form along a parametrized curve.
 /// γ: [a,b] -> R^n, ω = Σ fᵢ dxᵢ
 /// ∫ γ*ω = ∫_a^b Σ fᵢ(γ(t)) γᵢ'(t) dt
+#[allow(clippy::too_many_arguments)]
 pub fn line_integral(
     form_components: &dyn Fn(&DVector<f64>) -> DVector<f64>,
     curve: &dyn Fn(f64) -> DVector<f64>,
     curve_derivative: &dyn Fn(f64) -> DVector<f64>,
-    a: f64, b: f64, n: usize,
+    a: f64,
+    b: f64,
+    n: usize,
 ) -> f64 {
-    integrate_1d(&|t| {
-        let point = curve(t);
-        let velocity = curve_derivative(t);
-        let f = form_components(&point);
-        f.dot(&velocity)
-    }, a, b, n)
+    integrate_1d(
+        &|t| {
+            let point = curve(t);
+            let velocity = curve_derivative(t);
+            let f = form_components(&point);
+            f.dot(&velocity)
+        },
+        a,
+        b,
+        n,
+    )
 }
 
 /// Compute the area of a parametrized surface.
+#[allow(clippy::too_many_arguments)]
 pub fn surface_area(
-    surface: &dyn Fn(f64, f64) -> DVector<f64>,
+    _surface: &dyn Fn(f64, f64) -> DVector<f64>,
     dds_u: &dyn Fn(f64, f64) -> DVector<f64>,
     dds_v: &dyn Fn(f64, f64) -> DVector<f64>,
-    a1: f64, b1: f64,
-    a2: f64, b2: f64,
+    a1: f64,
+    b1: f64,
+    a2: f64,
+    b2: f64,
     n: usize,
 ) -> f64 {
-    integrate_2d(&|u, v| {
-        let du = dds_u(u, v);
-        let dv = dds_v(u, v);
-        // |du × dv| = sqrt(|du|²|dv|² - (du·dv)²)
-        let du2 = du.dot(&du);
-        let dv2 = dv.dot(&dv);
-        let dudv = du.dot(&dv);
-        (du2 * dv2 - dudv * dudv).sqrt()
-    }, a1, b1, a2, b2, n)
+    integrate_2d(
+        &|u, v| {
+            let du = dds_u(u, v);
+            let dv = dds_v(u, v);
+            // |du × dv| = sqrt(|du|²|dv|² - (du·dv)²)
+            let du2 = du.dot(&du);
+            let dv2 = dv.dot(&dv);
+            let dudv = du.dot(&dv);
+            (du2 * dv2 - dudv * dudv).sqrt()
+        },
+        a1,
+        b1,
+        a2,
+        b2,
+        n,
+    )
 }
 
 #[cfg(test)]
@@ -185,9 +213,20 @@ mod tests {
 
         // ω = x dy - y dx, so f = (-y, x)
         let form_correct = |p: &DVector<f64>| DVector::from_vec(vec![-p[1], p[0]]);
-        let result = line_integral(&form_correct, &curve, &curve_d, 0.0, 2.0 * std::f64::consts::PI, 1000);
-        assert!((result - 2.0 * std::f64::consts::PI).abs() < 0.01,
-            "Expected 2π ≈ {}, got {}", 2.0 * std::f64::consts::PI, result);
+        let result = line_integral(
+            &form_correct,
+            &curve,
+            &curve_d,
+            0.0,
+            2.0 * std::f64::consts::PI,
+            1000,
+        );
+        assert!(
+            (result - 2.0 * std::f64::consts::PI).abs() < 0.01,
+            "Expected 2π ≈ {}, got {}",
+            2.0 * std::f64::consts::PI,
+            result
+        );
     }
 
     #[test]
@@ -213,7 +252,11 @@ mod tests {
             &|u, v| DVector::from_vec(vec![u, v, 0.0]),
             &|_, _| DVector::from_vec(vec![1.0, 0.0, 0.0]),
             &|_, _| DVector::from_vec(vec![0.0, 1.0, 0.0]),
-            0.0, 1.0, 0.0, 1.0, 50,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            50,
         );
         assert!((area - 1.0).abs() < 1e-3);
     }
@@ -231,7 +274,14 @@ mod tests {
         let curve = |t: f64| DVector::from_vec(vec![t.cos(), t.sin()]);
         let curve_d = |t: f64| DVector::from_vec(vec![-t.sin(), t.cos()]);
         let form = |p: &DVector<f64>| DVector::from_vec(vec![-p[1], p[0]]);
-        let boundary = line_integral(&form, &curve, &curve_d, 0.0, 2.0 * std::f64::consts::PI, 1000);
+        let boundary = line_integral(
+            &form,
+            &curve,
+            &curve_d,
+            0.0,
+            2.0 * std::f64::consts::PI,
+            1000,
+        );
         assert!((boundary - 2.0 * std::f64::consts::PI).abs() < 0.01);
     }
 

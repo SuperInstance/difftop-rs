@@ -1,7 +1,6 @@
 //! Transversality: generic intersection theory.
 
-use nalgebra::{DVector, DMatrix};
-use crate::tangent::{TangentVector, TangentSpace};
+use nalgebra::{DMatrix, DVector};
 
 /// Check if two submanifolds intersect transversally.
 /// Two submanifolds N₁, N₂ of M intersect transversally at p if:
@@ -59,7 +58,7 @@ pub fn transverse_intersection_dimension(dim_n1: usize, dim_n2: usize, dim_m: us
 /// f is transverse to S if for every x with f(x) ∈ S:
 /// Im(df_x) + T_{f(x)} S = T_{f(x)} N
 pub fn is_map_transverse_to_submanifold(
-    df: &DMatrix<f64>,     // Jacobian of f at x (dim_N × dim_M)
+    df: &DMatrix<f64>,        // Jacobian of f at x (dim_N × dim_M)
     tangent_s: &DMatrix<f64>, // Basis for T_{f(x)} S (dim_N × dim_S)
     dim_n: usize,
     tolerance: f64,
@@ -143,9 +142,7 @@ pub fn find_intersections(
 
 /// The intersection number of two transverse submanifolds (oriented).
 /// Counts intersections with sign determined by orientation compatibility.
-pub fn intersection_number(
-    intersections: &[IntersectionPoint],
-) -> i32 {
+pub fn intersection_number(intersections: &[IntersectionPoint]) -> i32 {
     intersections.iter().map(|pt| pt.sign).sum()
 }
 
@@ -159,15 +156,16 @@ pub struct IntersectionPoint {
 
 /// Compute the orientation sign at an intersection point.
 /// Given the combined tangent space, determine if it matches the ambient orientation.
-pub fn orientation_sign(
-    combined_basis: &DMatrix<f64>,
-    ambient_orientation: &DMatrix<f64>,
-) -> i32 {
+pub fn orientation_sign(combined_basis: &DMatrix<f64>, _ambient_orientation: &DMatrix<f64>) -> i32 {
     // Determinant of the change-of-basis matrix
     // If the combined basis (as columns) has positive determinant relative to ambient, sign = +1
     if combined_basis.nrows() == combined_basis.ncols() {
         let det = combined_basis.determinant();
-        if det > 0.0 { 1 } else { -1 }
+        if det > 0.0 {
+            1
+        } else {
+            -1
+        }
     } else {
         // Non-square: project and check
         1
@@ -225,9 +223,18 @@ mod tests {
     #[test]
     fn test_intersection_number() {
         let pts = vec![
-            IntersectionPoint { point: DVector::from_vec(vec![0.0, 0.0]), sign: 1 },
-            IntersectionPoint { point: DVector::from_vec(vec![1.0, 0.0]), sign: -1 },
-            IntersectionPoint { point: DVector::from_vec(vec![2.0, 0.0]), sign: 1 },
+            IntersectionPoint {
+                point: DVector::from_vec(vec![0.0, 0.0]),
+                sign: 1,
+            },
+            IntersectionPoint {
+                point: DVector::from_vec(vec![1.0, 0.0]),
+                sign: -1,
+            },
+            IntersectionPoint {
+                point: DVector::from_vec(vec![2.0, 0.0]),
+                sign: 1,
+            },
         ];
         assert_eq!(intersection_number(&pts), 1);
     }

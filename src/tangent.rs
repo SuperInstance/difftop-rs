@@ -1,7 +1,7 @@
 //! Tangent spaces and tangent bundles.
 
-use nalgebra::{DVector, DMatrix};
-use serde::{Serialize, Deserialize};
+use nalgebra::{DMatrix, DVector};
+use serde::{Deserialize, Serialize};
 
 /// A tangent vector at a point on a manifold.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -15,7 +15,10 @@ pub struct TangentVector {
 impl TangentVector {
     pub fn new(base_point: DVector<f64>, components: DVector<f64>) -> Self {
         assert_eq!(base_point.len(), components.len());
-        Self { base_point, components }
+        Self {
+            base_point,
+            components,
+        }
     }
 
     /// Dimension of the tangent space.
@@ -26,7 +29,10 @@ impl TangentVector {
     /// Add two tangent vectors at the same base point.
     pub fn add(&self, other: &TangentVector) -> TangentVector {
         assert_eq!(self.base_point, other.base_point);
-        TangentVector::new(self.base_point.clone(), &self.components + &other.components)
+        TangentVector::new(
+            self.base_point.clone(),
+            &self.components + &other.components,
+        )
     }
 
     /// Scale a tangent vector.
@@ -58,7 +64,11 @@ pub struct TangentSpace {
 impl TangentSpace {
     pub fn new(base_point: DVector<f64>) -> Self {
         let dim = base_point.len();
-        Self { base_point, dimension: dim, metric: None }
+        Self {
+            base_point,
+            dimension: dim,
+            metric: None,
+        }
     }
 
     pub fn with_metric(mut self, metric: DMatrix<f64>) -> Self {
@@ -95,7 +105,10 @@ pub struct TangentBundle {
 
 impl TangentBundle {
     pub fn new(base_dimension: usize) -> Self {
-        Self { base_dimension, total_dimension: 2 * base_dimension }
+        Self {
+            base_dimension,
+            total_dimension: 2 * base_dimension,
+        }
     }
 
     /// Create a tangent bundle element (point, vector).
@@ -126,7 +139,10 @@ pub struct CotangentVector {
 
 impl CotangentVector {
     pub fn new(base_point: DVector<f64>, components: DVector<f64>) -> Self {
-        Self { base_point, components }
+        Self {
+            base_point,
+            components,
+        }
     }
 
     /// Apply the covector to a tangent vector.
@@ -147,7 +163,11 @@ impl Differential {
     pub fn new(jacobian: DMatrix<f64>) -> Self {
         let source_dim = jacobian.ncols();
         let target_dim = jacobian.nrows();
-        Self { jacobian, source_dim, target_dim }
+        Self {
+            jacobian,
+            source_dim,
+            target_dim,
+        }
     }
 
     /// Push forward a tangent vector.
@@ -173,16 +193,26 @@ mod tests {
 
     #[test]
     fn test_tangent_vector_norm() {
-        let v = TangentVector::new(DVector::from_vec(vec![0.0, 0.0]), DVector::from_vec(vec![3.0, 4.0]));
+        let v = TangentVector::new(
+            DVector::from_vec(vec![0.0, 0.0]),
+            DVector::from_vec(vec![3.0, 4.0]),
+        );
         assert!((v.norm() - 5.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_tangent_space_with_metric() {
         let p = DVector::from_vec(vec![0.0, 0.0]);
-        let ts = TangentSpace::new(p).with_metric(DMatrix::from_row_slice(2, 2, &[2.0, 0.0, 0.0, 2.0]));
-        let v = TangentVector::new(DVector::from_vec(vec![0.0, 0.0]), DVector::from_vec(vec![1.0, 0.0]));
-        let w = TangentVector::new(DVector::from_vec(vec![0.0, 0.0]), DVector::from_vec(vec![1.0, 0.0]));
+        let ts =
+            TangentSpace::new(p).with_metric(DMatrix::from_row_slice(2, 2, &[2.0, 0.0, 0.0, 2.0]));
+        let v = TangentVector::new(
+            DVector::from_vec(vec![0.0, 0.0]),
+            DVector::from_vec(vec![1.0, 0.0]),
+        );
+        let w = TangentVector::new(
+            DVector::from_vec(vec![0.0, 0.0]),
+            DVector::from_vec(vec![1.0, 0.0]),
+        );
         assert!((ts.inner_product(&v, &w) - 2.0).abs() < 1e-10);
     }
 
@@ -190,7 +220,10 @@ mod tests {
     fn test_tangent_bundle() {
         let tb = TangentBundle::new(2);
         assert_eq!(tb.total_dimension, 4);
-        let elem = tb.element(DVector::from_vec(vec![1.0, 2.0]), DVector::from_vec(vec![3.0, 4.0]));
+        let elem = tb.element(
+            DVector::from_vec(vec![1.0, 2.0]),
+            DVector::from_vec(vec![3.0, 4.0]),
+        );
         let base = tb.projection(&elem);
         assert!((base[0] - 1.0).abs() < 1e-10);
     }
@@ -199,7 +232,10 @@ mod tests {
     fn test_differential_pushforward() {
         let jac = DMatrix::from_row_slice(2, 2, &[1.0, 0.0, 0.0, 1.0]);
         let d = Differential::new(jac);
-        let v = TangentVector::new(DVector::from_vec(vec![0.0, 0.0]), DVector::from_vec(vec![1.0, 2.0]));
+        let v = TangentVector::new(
+            DVector::from_vec(vec![0.0, 0.0]),
+            DVector::from_vec(vec![1.0, 2.0]),
+        );
         let pushed = d.push_forward(&v);
         assert!((pushed.components[0] - 1.0).abs() < 1e-10);
         assert!((pushed.components[1] - 2.0).abs() < 1e-10);
