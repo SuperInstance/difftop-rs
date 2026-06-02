@@ -1,0 +1,11 @@
+[package]
+name = "difftop-rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/SuperInstance/difftop-rs"
+description = "Differential topology in Rust — smooth manifolds, tangent bundles, differential forms, Stokes' theorem, degree theory"
+
+[dependencies]
+nalgebra = { version = "0.33", features = ["serde-serialize"] }
+serde = { version = "1", features = ["derive"] }
